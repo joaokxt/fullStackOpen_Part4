@@ -12,12 +12,6 @@ blogsRouter.get('/', (request, response) => {
 blogsRouter.post('/', (request, response) => {
     const body = request.body
 
-    if(body.content === undefined){
-        return response.status(400).json({
-            error: "content missing"
-        })
-    }
-
     blog = new Blog({
         title: body.title,
         author: body.author,
@@ -30,6 +24,7 @@ blogsRouter.post('/', (request, response) => {
       .then(result => {
         response.status(201).json(result)
       })
+      .catch(error => next(error))
 })
 
 module.exports = blogsRouter
