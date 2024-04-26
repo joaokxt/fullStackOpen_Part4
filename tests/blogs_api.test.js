@@ -1,4 +1,4 @@
-const { test, after, beforeEach } = require('node:test')
+const { test, after, beforeEach, describe } = require('node:test')
 const assert = require('node:assert')
 const mongoose = require('mongoose')
 const supertest = require('supertest')
@@ -12,10 +12,16 @@ const api = supertest(app)
 beforeEach(async () => {
     await Blog.deleteMany({})
 
+    /*
     const blogObjects = helper.initialBlogs
         .map(b => new Blog(b))
     const promises = blogObjects.map(blog => blog.save())
     await Promise.all(promises)
+    */
+
+    await Blog.insertMany(helper.initialBlogs)
+
+    console.log('db created')
 })
 
 test('get all notes', async () => {
@@ -79,6 +85,35 @@ test('creating an invalid blog returns 400 Bad Request', async () => {
         .post('/api/blogs')
         .send(invalidBlog)
         .expect(400)
+})
+
+test('deleting a note is succesful', async () => {
+    const blogsAtStart = await helper.blogsInDB()
+    
+    await api
+        .delete(`/api/blogs/${blogsAtStart[0].id}`)
+
+    const blogsAtEnd = await helper.blogsInDB()
+    assert.strictEqual(blogsAtEnd.length, blogsAtStart.length - 1)
+
+    const titles = blogsAtEnd.map(b => b.title)
+    assert(!titles.includes(blogsAtStart[0].title))
+})
+
+test('updating a blog is succesful', async () => {
+    const blogsAtStart = await helper.blogsInDB()
+    const blogToUpdate = blogsAtStart[0]
+
+    blogToUpdate.title = 'Modified title'
+
+    await api
+        .put(`/api/blogs/${blogToUpdate.id}`)
+        .send(blogToUpdate)
+        .expect(201)
+
+    const blogsAtEnd = await helper.blogsInDB()
+    const titles = blogsAtEnd.map(b => b.title)
+    assert(titles.includes('Modified title'))
 })
 
 
