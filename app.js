@@ -1,10 +1,25 @@
 const config = require('./utils/config')
-const { info, error } = require('./utils/logger')
-const middleware = require('./utils/middleware')
-
 const express = require('express')
 const app = express()
+
+require('express-async-errors')
 const cors = require('cors')
+
+const blogsRouter = require('./controllers/blogs')
+const middleware = require('./utils/middleware')
+
+const logger = require('./utils/logger')
+
+const mongoose = require('mongoose')
+
+mongoose.set('strictQuery', false)
+mongoose.connect(config.MONGODB_URI)
+    .then(() => {
+        logger.info('Connected to DB')
+    })
+    .catch(error => {
+        logger.error('Error connecting to DB: ', error)
+    })
 
 const morgan = require('morgan')
 morgan.token('content', function(req, res) { 
@@ -12,27 +27,13 @@ morgan.token('content', function(req, res) {
 })
 app.use(morgan(':method :url :status: :res[content-length] - :response-time ms :content'))
 
-app.use(express.json())
 app.use(cors())
-
-const mongoose = require('mongoose')
-
-mongoose.set('strictQuery', false)
-mongoose.connect(config.MONGODB_URI)
-    .then(() => {
-        info('Connected to DB')
-    })
-    .catch(error => {
-        error('Error connecting to DB: ', error)
-    })
-
-const blogsRouter = require('./controllers/blogs')
+app.use(express.static('dist'))
+app.use(express.json())
 
 app.use('/api/blogs', blogsRouter)
 
 app.use(middleware.unknownEndpoint)
 app.use(middleware.errorHandler)
-
-
 
 module.exports = app
