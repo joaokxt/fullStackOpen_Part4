@@ -19,21 +19,11 @@ blogsRouter.get('/:id', async (request, response) => {
     }
 })
   
-const getToken = request => {
-    const authorization = request.get('authorization')
-    if(authorization && authorization.startsWith('Bearer ')){
-        return authorization.replace('Bearer ', '')
-    }
-
-    return null
-}
 
 blogsRouter.post('/', async (request, response) => {
     const body = request.body
 
-    const decodedToken = jwt.verify(getToken(request), process.env.SECRET)
-
-    const user = await User.findById(decodedToken.id)
+    const user = request.user
 
     const blog = new Blog({
         title: body.title,
@@ -64,6 +54,13 @@ blogsRouter.put('/:id', async (request, response) => {
 })
 
 blogsRouter.delete('/:id', async (request, response) => {
+    const user = request.user
+    const blogToDelete = await Blog.findById(request.params.id)
+
+    if(blogToDelete.user.toString() !== user.id.toString()) {
+        response.status(403).json({ error: 'Not authorized' })
+    }
+
     await Blog.findByIdAndDelete(request.params.id)
     response.status(204).end()
 })
